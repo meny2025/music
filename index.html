@@ -1,0 +1,1484 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>עורך אודיו מתקדם</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Heebo', sans-serif;
+        }
+        
+        .waveform {
+            background: linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%);
+            height: 4px;
+            border-radius: 2px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .waveform::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: #60a5fa;
+            width: var(--progress, 0%);
+            transition: width 0.1s ease;
+        }
+        
+        .control-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .control-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6px;
+            border-radius: 3px;
+            background: #e5e7eb;
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3b82f6;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .effect-active {
+            background: #3b82f6 !important;
+            color: white !important;
+        }
+        
+        .timeline {
+            background: linear-gradient(to right, #f3f4f6 0%, #e5e7eb 100%);
+            border: 2px dashed #d1d5db;
+            min-height: 120px;
+        }
+        
+        .audio-track {
+            background: linear-gradient(45deg, #3b82f6, #1d4ed8);
+            border-radius: 8px;
+            height: 60px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .audio-track::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 2px,
+                rgba(255,255,255,0.1) 2px,
+                rgba(255,255,255,0.1) 4px
+            );
+        }
+    </style>
+
+<meta name="NetsparkQuiltingResult" total-length="67728" removed="0" rules-found="w2676,w3473,w3056,w22404,w23099,w33715,w2598,w22655,w33309,w4838,w4839,w9879,w2131,w341,w20622,w3915,w3916,w11964,w10941,w6683" />
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-6 max-w-6xl">
+        <!-- Header -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">🎵 עורך אודיו מתקדם</h1>
+            <p class="text-gray-600">עורך אודיו מקצועי עם כל הכלים הדרושים לעריכה מתקדמת</p>
+        </div>
+
+        <!-- File Upload -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">📁 טעינת קובץ אודיו</h2>
+            <div class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-400 transition-colors">
+                <input type="file" id="audioFile" accept="audio/*" class="hidden">
+                <label for="audioFile" class="cursor-pointer">
+                    <div class="text-4xl mb-4">🎵</div>
+                    <p class="text-lg font-medium text-gray-700 mb-2">לחץ כאן לבחירת קובץ אודיו</p>
+                    <p class="text-sm text-gray-500">תומך בפורמטים: MP3, WAV, OGG, M4A</p>
+                </label>
+            </div>
+        </div>
+
+        <!-- Audio Player -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6" id="playerSection" style="display: none;">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">🎧 נגן אודיו</h2>
+            <audio id="audioPlayer" class="hidden"></audio>
+            
+            <!-- Waveform Display -->
+            <div class="mb-6">
+                <div class="waveform mb-2" id="waveform"></div>
+                <div class="flex justify-between text-sm text-gray-500">
+                    <span id="currentTime">00:00</span>
+                    <span id="totalTime">00:00</span>
+                </div>
+            </div>
+
+            <!-- Player Controls -->
+            <div class="flex items-center justify-center space-x-4 mb-6">
+                <button id="prevBtn" class="control-btn bg-gray-200 hover:bg-gray-300 p-3 rounded-full">
+                    <span class="text-xl">⏮️</span>
+                </button>
+                <button id="playPauseBtn" class="control-btn bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full">
+                    <span class="text-2xl" id="playIcon">▶️</span>
+                </button>
+                <button id="nextBtn" class="control-btn bg-gray-200 hover:bg-gray-300 p-3 rounded-full">
+                    <span class="text-xl">⏭️</span>
+                </button>
+            </div>
+
+            <!-- Volume Control -->
+            <div class="flex items-center space-x-4 mb-4">
+                <span class="text-lg">🔊</span>
+                <input type="range" id="volumeSlider" min="0" max="100" value="50" class="slider flex-1">
+                <span id="volumeValue" class="text-sm text-gray-600 w-12">50%</span>
+            </div>
+
+            <!-- Speed Control -->
+            <div class="flex items-center space-x-4">
+                <span class="text-lg">⚡</span>
+                <input type="range" id="speedSlider" min="0.5" max="2" step="0.1" value="1" class="slider flex-1">
+                <span id="speedValue" class="text-sm text-gray-600 w-12">1.0x</span>
+            </div>
+        </div>
+
+        <!-- Audio Effects -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6" id="effectsSection" style="display: none;">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">🎛️ אפקטים ועיבוד</h2>
+            
+            <!-- Basic Effects -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-3 text-gray-700">🎵 אפקטים בסיסיים</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button id="reverbBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">🏛️</div>
+                        <div class="text-sm font-medium">Reverb</div>
+                    </button>
+                    <button id="echoBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">📢</div>
+                        <div class="text-sm font-medium">Echo</div>
+                    </button>
+                    <button id="bassBoostBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">🎸</div>
+                        <div class="text-sm font-medium">Bass Boost</div>
+                    </button>
+                    <button id="trebleBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">🎼</div>
+                        <div class="text-sm font-medium">Treble</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Voice Effects -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-3 text-gray-700">🎤 אפקטי קול</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    <button id="chipmunkBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">🐿️</div>
+                        <div class="text-sm font-medium">צ'יפמאנקס</div>
+                    </button>
+                    <button id="robotBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">🤖</div>
+                        <div class="text-sm font-medium">רובוט</div>
+                    </button>
+                    <button id="deepVoiceBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">👹</div>
+                        <div class="text-sm font-medium">קול עמוק</div>
+                    </button>
+                    <button id="alienBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">👽</div>
+                        <div class="text-sm font-medium">חייזר</div>
+                    </button>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <button id="babyBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">👶</div>
+                        <div class="text-sm font-medium">תינוק</div>
+                    </button>
+                    <button id="monsterBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">👾</div>
+                        <div class="text-sm font-medium">מפלצת</div>
+                    </button>
+                    <button id="heliumBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">🎈</div>
+                        <div class="text-sm font-medium">הליום</div>
+                    </button>
+                    <button id="oldRadioBtn" class="effect-btn bg-gray-100 hover:bg-gray-200 p-4 rounded-lg text-center transition-colors">
+                        <div class="text-2xl mb-2">📻</div>
+                        <div class="text-sm font-medium">רדיו ישן</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Voice Changer Controls -->
+            <div class="bg-gray-50 rounded-lg p-4 mb-6">
+                <h3 class="font-semibold mb-4 text-gray-700">🎚️ בקרת שינוי קול</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">גובה הקול</label>
+                        <input type="range" id="pitchSlider" min="0.5" max="2" step="0.1" value="1" class="slider w-full">
+                        <div class="text-center text-sm text-gray-600 mt-1">
+                            <span id="pitchValue">1.0x</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">עיוות קול</label>
+                        <input type="range" id="distortionSlider" min="0" max="100" value="0" class="slider w-full">
+                        <div class="text-center text-sm text-gray-600 mt-1">
+                            <span id="distortionValue">0%</span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">רטט קול</label>
+                        <input type="range" id="vibratoSlider" min="0" max="10" step="0.5" value="0" class="slider w-full">
+                        <div class="text-center text-sm text-gray-600 mt-1">
+                            <span id="vibratoValue">0Hz</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EQ Controls -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="font-semibold mb-4 text-gray-700">🎚️ אקולייזר</h3>
+                <div class="grid grid-cols-5 gap-4">
+                    <div class="text-center">
+                        <label class="block text-xs text-gray-600 mb-2">60Hz</label>
+                        <input type="range" id="eq60" min="-20" max="20" value="0" class="slider vertical" orient="vertical">
+                        <span class="text-xs text-gray-500" id="eq60Value">0dB</span>
+                    </div>
+                    <div class="text-center">
+                        <label class="block text-xs text-gray-600 mb-2">170Hz</label>
+                        <input type="range" id="eq170" min="-20" max="20" value="0" class="slider vertical" orient="vertical">
+                        <span class="text-xs text-gray-500" id="eq170Value">0dB</span>
+                    </div>
+                    <div class="text-center">
+                        <label class="block text-xs text-gray-600 mb-2">310Hz</label>
+                        <input type="range" id="eq310" min="-20" max="20" value="0" class="slider vertical" orient="vertical">
+                        <span class="text-xs text-gray-500" id="eq310Value">0dB</span>
+                    </div>
+                    <div class="text-center">
+                        <label class="block text-xs text-gray-600 mb-2">600Hz</label>
+                        <input type="range" id="eq600" min="-20" max="20" value="0" class="slider vertical" orient="vertical">
+                        <span class="text-xs text-gray-500" id="eq600Value">0dB</span>
+                    </div>
+                    <div class="text-center">
+                        <label class="block text-xs text-gray-600 mb-2">1kHz</label>
+                        <input type="range" id="eq1k" min="-20" max="20" value="0" class="slider vertical" orient="vertical">
+                        <span class="text-xs text-gray-500" id="eq1kValue">0dB</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Audio Mixer -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6" id="mixerSection" style="display: none;">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">🎚️ מיקסר שירים</h2>
+            
+            <!-- Second Audio Upload -->
+            <div class="mb-6">
+                <h3 class="text-lg font-medium mb-3 text-gray-700">📁 הוסף שיר נוסף למיקס</h3>
+                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                    <input type="file" id="secondAudioFile" accept="audio/*" class="hidden">
+                    <label for="secondAudioFile" class="cursor-pointer">
+                        <div class="text-3xl mb-2">🎵</div>
+                        <p class="text-md font-medium text-gray-700 mb-1">בחר שיר שני למיקס</p>
+                        <p class="text-sm text-gray-500">יתערבב עם השיר הראשי</p>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Mixer Controls -->
+            <div id="mixerControls" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Track 1 Controls -->
+                    <div class="bg-blue-50 rounded-lg p-4">
+                        <h4 class="font-semibold mb-3 text-blue-800">🎵 רצועה 1 (ראשית)</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">עוצמת קול</label>
+                                <input type="range" id="track1Volume" min="0" max="100" value="70" class="slider w-full">
+                                <span class="text-sm text-gray-600" id="track1VolumeValue">70%</span>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">פאן (שמאל/ימין)</label>
+                                <input type="range" id="track1Pan" min="-100" max="100" value="0" class="slider w-full">
+                                <span class="text-sm text-gray-600" id="track1PanValue">מרכז</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Track 2 Controls -->
+                    <div class="bg-green-50 rounded-lg p-4">
+                        <h4 class="font-semibold mb-3 text-green-800">🎵 רצועה 2 (נוספת)</h4>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">עוצמת קול</label>
+                                <input type="range" id="track2Volume" min="0" max="100" value="30" class="slider w-full">
+                                <span class="text-sm text-gray-600" id="track2VolumeValue">30%</span>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">פאן (שמאל/ימין)</label>
+                                <input type="range" id="track2Pan" min="-100" max="100" value="0" class="slider w-full">
+                                <span class="text-sm text-gray-600" id="track2PanValue">מרכז</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mix Options -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <h4 class="font-semibold mb-3 text-gray-700">🎛️ אפשרויות מיקס</h4>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                        <button id="crossfadeBtn" class="bg-purple-100 hover:bg-purple-200 p-3 rounded-lg text-center transition-colors">
+                            <div class="text-xl mb-1">🔄</div>
+                            <div class="text-sm font-medium">Crossfade</div>
+                        </button>
+                        <button id="voiceSwapBtn" class="bg-red-100 hover:bg-red-200 p-3 rounded-lg text-center transition-colors">
+                            <div class="text-xl mb-1">🔄</div>
+                            <div class="text-sm font-medium">החלף קולות</div>
+                        </button>
+                        <button id="harmonizeBtn" class="bg-yellow-100 hover:bg-yellow-200 p-3 rounded-lg text-center transition-colors">
+                            <div class="text-xl mb-1">🎼</div>
+                            <div class="text-sm font-medium">הרמוניה</div>
+                        </button>
+                        <button id="beatMatchBtn" class="bg-green-100 hover:bg-green-200 p-3 rounded-lg text-center transition-colors">
+                            <div class="text-xl mb-1">🥁</div>
+                            <div class="text-sm font-medium">סנכרון קצב</div>
+                        </button>
+                    </div>
+                    
+                    <!-- Advanced Voice Swap -->
+                    <div class="bg-white rounded-lg p-4 border-2 border-blue-200">
+                        <h5 class="font-medium mb-3 text-blue-800">🎤 החלפת קולות מתקדמת</h5>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <button id="voiceTransferBtn" class="bg-blue-100 hover:bg-blue-200 p-3 rounded-lg text-center transition-colors">
+                                <div class="text-lg mb-1">🔄</div>
+                                <div class="text-xs font-medium">העבר קול 1→2</div>
+                            </button>
+                            <button id="voiceMorphBtn" class="bg-green-100 hover:bg-green-200 p-3 rounded-lg text-center transition-colors">
+                                <div class="text-lg mb-1">🌀</div>
+                                <div class="text-xs font-medium">מיזוג קולות</div>
+                            </button>
+                            <button id="voiceIsolateBtn" class="bg-orange-100 hover:bg-orange-200 p-3 rounded-lg text-center transition-colors">
+                                <div class="text-lg mb-1">🎯</div>
+                                <div class="text-xs font-medium">בודד קול</div>
+                            </button>
+                        </div>
+                        
+                        <!-- Voice Swap Intensity -->
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">עוצמת החלפה</label>
+                            <input type="range" id="voiceSwapIntensity" min="0" max="100" value="50" class="slider w-full">
+                            <div class="text-center text-sm text-gray-600 mt-1">
+                                <span id="voiceSwapValue">50%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Crossfade Control -->
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-semibold mb-3 text-gray-700">🎚️ בקרת מעבר</h4>
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-blue-600 font-medium">רצועה 1</span>
+                        <input type="range" id="crossfadeSlider" min="0" max="100" value="50" class="slider flex-1">
+                        <span class="text-sm text-green-600 font-medium">רצועה 2</span>
+                    </div>
+                    <div class="text-center text-sm text-gray-600 mt-2">
+                        <span id="crossfadeValue">50% - 50%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Timeline Editor -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6" id="timelineSection" style="display: none;">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">✂️ עריכת טיימליין</h2>
+            
+            <!-- Timeline Controls -->
+            <div class="flex flex-wrap gap-4 mb-4">
+                <button id="cutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    ✂️ חתוך
+                </button>
+                <button id="copyBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    📋 העתק
+                </button>
+                <button id="pasteBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    📌 הדבק
+                </button>
+                <button id="undoBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    ↶ בטל
+                </button>
+                <button id="redoBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
+                    ↷ חזור
+                </button>
+            </div>
+
+            <!-- Selection Controls -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">⏰ התחלת בחירה</label>
+                    <input type="number" id="selectionStart" min="0" step="0.1" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="0.0">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">⏱️ סוף בחירה</label>
+                    <input type="number" id="selectionEnd" min="0" step="0.1" class="w-full p-2 border border-gray-300 rounded-lg" placeholder="0.0">
+                </div>
+            </div>
+
+            <!-- Timeline Display -->
+            <div class="timeline rounded-lg p-4 mb-4">
+                <div class="audio-track mb-2" id="audioTrack">
+                    <div class="flex items-center justify-center h-full text-white font-medium">
+                        🎵 רצועת אודיו ראשית
+                    </div>
+                </div>
+                <div class="text-center text-gray-500 text-sm">
+                    גרור לבחירת קטע • לחץ לקביעת נקודת התחלה/סיום
+                </div>
+            </div>
+        </div>
+
+        <!-- Export Options -->
+        <div class="bg-white rounded-xl shadow-lg p-6" id="exportSection" style="display: none;">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">💾 ייצוא והורדה</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Format Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">📁 פורמט קובץ</label>
+                    <select id="exportFormat" class="w-full p-3 border border-gray-300 rounded-lg">
+                        <option value="mp3">MP3 (דחוס)</option>
+                        <option value="wav">WAV (איכות גבוהה)</option>
+                        <option value="ogg">OGG (קוד פתוח)</option>
+                    </select>
+                </div>
+
+                <!-- Quality Selection -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">🎯 איכות</label>
+                    <select id="exportQuality" class="w-full p-3 border border-gray-300 rounded-lg">
+                        <option value="128">128 kbps (איכות בסיסית)</option>
+                        <option value="192">192 kbps (איכות טובה)</option>
+                        <option value="320" selected>320 kbps (איכות גבוהה)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Export Buttons -->
+            <div class="flex flex-wrap gap-4 mt-6">
+                <button id="exportBtn" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    💾 הורד קובץ מעובד
+                </button>
+                <button id="exportOriginalBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    📥 הורד קובץ מקורי
+                </button>
+                <button id="exportSelectionBtn" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-3 rounded-lg font-medium transition-colors">
+                    ✂️ הורד קטע נבחר
+                </button>
+            </div>
+
+            <!-- Progress Bar -->
+            <div id="exportProgress" class="mt-4 hidden">
+                <div class="bg-gray-200 rounded-full h-2">
+                    <div id="progressBar" class="bg-green-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                </div>
+                <p class="text-sm text-gray-600 mt-2 text-center">מעבד קובץ...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let audioContext;
+        let audioBuffer;
+        let secondAudioBuffer;
+        let sourceNode;
+        let secondSourceNode;
+        let gainNode;
+        let secondGainNode;
+        let panNode;
+        let secondPanNode;
+        let pitchShiftNode;
+        let distortionNode;
+        let vibratoNode;
+        let isPlaying = false;
+        let currentTime = 0;
+        let duration = 0;
+        let animationId;
+        let effects = {
+            reverb: false,
+            echo: false,
+            bassBoost: false,
+            treble: false,
+            chipmunk: false,
+            robot: false,
+            deepVoice: false,
+            alien: false,
+            baby: false,
+            monster: false,
+            helium: false,
+            oldRadio: false
+        };
+        let eqNodes = {};
+        let originalAudioData;
+        let editHistory = [];
+        let historyIndex = -1;
+        let mixerActive = false;
+
+        // Initialize Web Audio API
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                gainNode = audioContext.createGain();
+                gainNode.connect(audioContext.destination);
+                
+                // Create EQ nodes
+                const frequencies = [60, 170, 310, 600, 1000];
+                frequencies.forEach(freq => {
+                    const filter = audioContext.createBiquadFilter();
+                    filter.type = 'peaking';
+                    filter.frequency.value = freq;
+                    filter.Q.value = 1;
+                    filter.gain.value = 0;
+                    eqNodes[freq] = filter;
+                });
+                
+                // Connect EQ chain
+                let previousNode = gainNode;
+                Object.values(eqNodes).forEach(node => {
+                    previousNode.connect(node);
+                    previousNode = node;
+                });
+                Object.values(eqNodes)[Object.values(eqNodes).length - 1].connect(audioContext.destination);
+            }
+        }
+
+        // File upload handler
+        document.getElementById('audioFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    initAudioContext();
+                    audioContext.decodeAudioData(e.target.result)
+                        .then(buffer => {
+                            audioBuffer = buffer;
+                            originalAudioData = buffer;
+                            duration = buffer.duration;
+                            setupAudioPlayer();
+                            showSections();
+                            addToHistory('קובץ נטען');
+                        })
+                        .catch(err => {
+                            alert('שגיאה בטעינת הקובץ: ' + err.message);
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        function setupAudioPlayer() {
+            document.getElementById('totalTime').textContent = formatTime(duration);
+            updateWaveform();
+        }
+
+        function showSections() {
+            document.getElementById('playerSection').style.display = 'block';
+            document.getElementById('effectsSection').style.display = 'block';
+            document.getElementById('mixerSection').style.display = 'block';
+            document.getElementById('timelineSection').style.display = 'block';
+            document.getElementById('exportSection').style.display = 'block';
+        }
+
+        // Play/Pause functionality
+        document.getElementById('playPauseBtn').addEventListener('click', function() {
+            if (isPlaying) {
+                pauseAudio();
+            } else {
+                playAudio();
+            }
+        });
+
+        function playAudio() {
+            if (!audioBuffer) return;
+            
+            initAudioContext();
+            
+            if (sourceNode) {
+                sourceNode.stop();
+            }
+            if (secondSourceNode) {
+                secondSourceNode.stop();
+            }
+            
+            // Setup main track
+            sourceNode = audioContext.createBufferSource();
+            sourceNode.buffer = audioBuffer;
+            
+            if (panNode) {
+                sourceNode.connect(panNode);
+                panNode.connect(gainNode);
+            } else {
+                sourceNode.connect(gainNode);
+            }
+            
+            sourceNode.start(0, currentTime);
+            
+            // Setup second track if available
+            if (secondAudioBuffer && mixerActive) {
+                secondSourceNode = audioContext.createBufferSource();
+                secondSourceNode.buffer = secondAudioBuffer;
+                
+                if (secondPanNode && secondGainNode) {
+                    secondSourceNode.connect(secondPanNode);
+                    secondPanNode.connect(secondGainNode);
+                    secondGainNode.connect(audioContext.destination);
+                }
+                
+                secondSourceNode.start(0, currentTime);
+            }
+            
+            isPlaying = true;
+            document.getElementById('playIcon').textContent = '⏸️';
+            
+            const startTime = audioContext.currentTime - currentTime;
+            updateProgress(startTime);
+        }
+
+        function pauseAudio() {
+            if (sourceNode) {
+                sourceNode.stop();
+            }
+            if (secondSourceNode) {
+                secondSourceNode.stop();
+            }
+            isPlaying = false;
+            document.getElementById('playIcon').textContent = '▶️';
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+            }
+        }
+
+        function updateProgress(startTime) {
+            if (!isPlaying) return;
+            
+            currentTime = audioContext.currentTime - startTime;
+            
+            if (currentTime >= duration) {
+                currentTime = 0;
+                pauseAudio();
+                return;
+            }
+            
+            document.getElementById('currentTime').textContent = formatTime(currentTime);
+            
+            const progress = (currentTime / duration) * 100;
+            document.getElementById('waveform').style.setProperty('--progress', progress + '%');
+            
+            animationId = requestAnimationFrame(() => updateProgress(startTime));
+        }
+
+        // Volume control
+        document.getElementById('volumeSlider').addEventListener('input', function(e) {
+            const volume = e.target.value / 100;
+            if (gainNode) {
+                gainNode.gain.value = volume;
+            }
+            document.getElementById('volumeValue').textContent = e.target.value + '%';
+        });
+
+        // Speed control
+        document.getElementById('speedSlider').addEventListener('input', function(e) {
+            const speed = parseFloat(e.target.value);
+            if (sourceNode) {
+                sourceNode.playbackRate.value = speed;
+            }
+            document.getElementById('speedValue').textContent = speed.toFixed(1) + 'x';
+        });
+
+        // Effect buttons
+        document.getElementById('reverbBtn').addEventListener('click', function() {
+            toggleEffect('reverb', this);
+        });
+
+        document.getElementById('echoBtn').addEventListener('click', function() {
+            toggleEffect('echo', this);
+        });
+
+        document.getElementById('bassBoostBtn').addEventListener('click', function() {
+            toggleEffect('bassBoost', this);
+        });
+
+        document.getElementById('trebleBtn').addEventListener('click', function() {
+            toggleEffect('treble', this);
+        });
+
+        // Voice effect buttons
+        document.getElementById('chipmunkBtn').addEventListener('click', function() {
+            resetVoiceEffects();
+            toggleEffect('chipmunk', this);
+            if (effects.chipmunk) {
+                document.getElementById('pitchSlider').value = 1.8;
+                document.getElementById('pitchValue').textContent = '1.8x';
+                document.getElementById('speedSlider').value = 1.3;
+                document.getElementById('speedValue').textContent = '1.3x';
+                applyPitchShift(1.8);
+            }
+        });
+
+        document.getElementById('robotBtn').addEventListener('click', function() {
+            resetVoiceEffects();
+            toggleEffect('robot', this);
+            if (effects.robot) {
+                document.getElementById('distortionSlider').value = 70;
+                document.getElementById('distortionValue').textContent = '70%';
+                document.getElementById('pitchSlider').value = 0.9;
+                document.getElementById('pitchValue').textContent = '0.9x';
+                applyDistortion(70);
+                applyPitchShift(0.9);
+            }
+        });
+
+        document.getElementById('deepVoiceBtn').addEventListener('click', function() {
+            resetVoiceEffects();
+            toggleEffect('deepVoice', this);
+            if (effects.deepVoice) {
+                document.getElementById('pitchSlider').value = 0.6;
+                document.getElementById('pitchValue').textContent = '0.6x';
+                document.getElementById('speedSlider').value = 0.9;
+                document.getElementById('speedValue').textContent = '0.9x';
+                applyPitchShift(0.6);
+            }
+        });
+
+        document.getElementById('alienBtn').addEventListener('click', function() {
+            resetVoiceEffects();
+            toggleEffect('alien', this);
+            if (effects.alien) {
+                document.getElementById('vibratoSlider').value = 6;
+                document.getElementById('vibratoValue').textContent = '6Hz';
+                document.getElementById('pitchSlider').value = 1.3;
+                document.getElementById('pitchValue').textContent = '1.3x';
+                document.getElementById('distortionSlider').value = 30;
+                document.getElementById('distortionValue').textContent = '30%';
+                applyVibrato(6);
+                applyPitchShift(1.3);
+                applyDistortion(30);
+            }
+        });
+
+        document.getElementById('babyBtn').addEventListener('click', function() {
+            resetVoiceEffects();
+            toggleEffect('baby', this);
+            if (effects.baby) {
+                document.getElementById('pitchSlider').value = 2.2;
+                document.getElementById('pitchValue').textContent = '2.2x';
+                document.getElementById('speedSlider').value = 1.1;
+                document.getElementById('speedValue').textContent = '1.1x';
+                applyPitchShift(2.2);
+            }
+        });
+
+        document.getElementById('monsterBtn').addEventListener('click', function() {
+            resetVoiceEffects();
+            toggleEffect('monster', this);
+            if (effects.monster) {
+                document.getElementById('pitchSlider').value = 0.4;
+                document.getElementById('pitchValue').textContent = '0.4x';
+                document.getElementById('distortionSlider').value = 80;
+                document.getElementById('distortionValue').textContent = '80%';
+                document.getElementById('vibratoSlider').value = 3;
+                document.getElementById('vibratoValue').textContent = '3Hz';
+                applyPitchShift(0.4);
+                applyDistortion(80);
+                applyVibrato(3);
+            }
+        });
+
+        document.getElementById('heliumBtn').addEventListener('click', function() {
+            resetVoiceEffects();
+            toggleEffect('helium', this);
+            if (effects.helium) {
+                document.getElementById('pitchSlider').value = 1.6;
+                document.getElementById('pitchValue').textContent = '1.6x';
+                document.getElementById('speedSlider').value = 1.2;
+                document.getElementById('speedValue').textContent = '1.2x';
+                applyPitchShift(1.6);
+            }
+        });
+
+        document.getElementById('oldRadioBtn').addEventListener('click', function() {
+            resetVoiceEffects();
+            toggleEffect('oldRadio', this);
+            if (effects.oldRadio) {
+                document.getElementById('distortionSlider').value = 40;
+                document.getElementById('distortionValue').textContent = '40%';
+                // Apply bandpass filter effect
+                eqNodes[60].gain.value = -15;
+                eqNodes[1000].gain.value = -10;
+                applyDistortion(40);
+            }
+        });
+
+        function toggleEffect(effectName, button) {
+            effects[effectName] = !effects[effectName];
+            if (effects[effectName]) {
+                button.classList.add('effect-active');
+            } else {
+                button.classList.remove('effect-active');
+            }
+            applyEffects();
+        }
+
+        function resetVoiceEffects() {
+            ['chipmunk', 'robot', 'deepVoice', 'alien', 'baby', 'monster', 'helium', 'oldRadio'].forEach(effect => {
+                effects[effect] = false;
+                const btn = document.getElementById(effect + 'Btn');
+                if (btn) btn.classList.remove('effect-active');
+            });
+            
+            // Reset sliders
+            document.getElementById('pitchSlider').value = 1;
+            document.getElementById('pitchValue').textContent = '1.0x';
+            document.getElementById('distortionSlider').value = 0;
+            document.getElementById('distortionValue').textContent = '0%';
+            document.getElementById('vibratoSlider').value = 0;
+            document.getElementById('vibratoValue').textContent = '0Hz';
+            document.getElementById('speedSlider').value = 1;
+            document.getElementById('speedValue').textContent = '1.0x';
+            
+            // Reset EQ
+            Object.values(eqNodes).forEach(node => {
+                if (node) node.gain.value = 0;
+            });
+        }
+
+        function applyPitchShift(pitchRatio) {
+            // Simulate pitch shift by changing playback rate
+            if (sourceNode) {
+                sourceNode.playbackRate.value = pitchRatio;
+            }
+        }
+
+        function applyDistortion(amount) {
+            if (!distortionNode && audioContext) {
+                distortionNode = audioContext.createWaveShaper();
+                distortionNode.curve = makeDistortionCurve(amount);
+                distortionNode.oversample = '4x';
+            }
+            if (distortionNode) {
+                distortionNode.curve = makeDistortionCurve(amount);
+            }
+        }
+
+        function makeDistortionCurve(amount) {
+            const samples = 44100;
+            const curve = new Float32Array(samples);
+            const deg = Math.PI / 180;
+            
+            for (let i = 0; i < samples; i++) {
+                const x = (i * 2) / samples - 1;
+                curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
+            }
+            
+            return curve;
+        }
+
+        function applyVibrato(frequency) {
+            // Create vibrato effect using oscillator
+            if (audioContext && frequency > 0) {
+                const oscillator = audioContext.createOscillator();
+                const vibratoGain = audioContext.createGain();
+                
+                oscillator.frequency.value = frequency;
+                vibratoGain.gain.value = 0.1;
+                
+                oscillator.connect(vibratoGain);
+                vibratoGain.connect(gainNode.gain);
+                oscillator.start();
+            }
+        }
+
+        function applyEffects() {
+            // Apply bass boost
+            if (effects.bassBoost) {
+                eqNodes[60].gain.value = 10;
+                eqNodes[170].gain.value = 5;
+            } else {
+                eqNodes[60].gain.value = 0;
+                eqNodes[170].gain.value = 0;
+            }
+            
+            // Apply treble
+            if (effects.treble) {
+                eqNodes[1000].gain.value = 8;
+            } else {
+                eqNodes[1000].gain.value = 0;
+            }
+        }
+
+        // Voice Control Sliders
+        document.getElementById('pitchSlider').addEventListener('input', function(e) {
+            const value = parseFloat(e.target.value);
+            document.getElementById('pitchValue').textContent = value.toFixed(1) + 'x';
+            applyPitchShift(value);
+        });
+
+        document.getElementById('distortionSlider').addEventListener('input', function(e) {
+            const value = parseInt(e.target.value);
+            document.getElementById('distortionValue').textContent = value + '%';
+            applyDistortion(value);
+        });
+
+        document.getElementById('vibratoSlider').addEventListener('input', function(e) {
+            const value = parseFloat(e.target.value);
+            document.getElementById('vibratoValue').textContent = value + 'Hz';
+            applyVibrato(value);
+        });
+
+        // EQ Controls
+        ['60', '170', '310', '600', '1k'].forEach(freq => {
+            const slider = document.getElementById('eq' + freq);
+            const valueDisplay = document.getElementById('eq' + freq + 'Value');
+            
+            slider.addEventListener('input', function(e) {
+                const value = parseFloat(e.target.value);
+                valueDisplay.textContent = value + 'dB';
+                
+                const frequency = freq === '1k' ? 1000 : parseInt(freq);
+                if (eqNodes[frequency]) {
+                    eqNodes[frequency].gain.value = value;
+                }
+            });
+        });
+
+        // Timeline controls
+        document.getElementById('cutBtn').addEventListener('click', function() {
+            const start = parseFloat(document.getElementById('selectionStart').value) || 0;
+            const end = parseFloat(document.getElementById('selectionEnd').value) || duration;
+            cutAudio(start, end);
+        });
+
+        function cutAudio(start, end) {
+            if (!audioBuffer || start >= end) return;
+            
+            const sampleRate = audioBuffer.sampleRate;
+            const startSample = Math.floor(start * sampleRate);
+            const endSample = Math.floor(end * sampleRate);
+            
+            const newLength = audioBuffer.length - (endSample - startSample);
+            const newBuffer = audioContext.createBuffer(
+                audioBuffer.numberOfChannels,
+                newLength,
+                sampleRate
+            );
+            
+            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                const oldData = audioBuffer.getChannelData(channel);
+                const newData = newBuffer.getChannelData(channel);
+                
+                // Copy data before cut
+                for (let i = 0; i < startSample; i++) {
+                    newData[i] = oldData[i];
+                }
+                
+                // Copy data after cut
+                for (let i = endSample; i < oldData.length; i++) {
+                    newData[i - (endSample - startSample)] = oldData[i];
+                }
+            }
+            
+            audioBuffer = newBuffer;
+            duration = newBuffer.duration;
+            setupAudioPlayer();
+            addToHistory('חיתוך אודיו');
+        }
+
+        // Undo/Redo functionality
+        function addToHistory(action) {
+            editHistory = editHistory.slice(0, historyIndex + 1);
+            editHistory.push({
+                action: action,
+                buffer: audioBuffer,
+                timestamp: Date.now()
+            });
+            historyIndex++;
+        }
+
+        document.getElementById('undoBtn').addEventListener('click', function() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                audioBuffer = editHistory[historyIndex].buffer;
+                duration = audioBuffer.duration;
+                setupAudioPlayer();
+            }
+        });
+
+        document.getElementById('redoBtn').addEventListener('click', function() {
+            if (historyIndex < editHistory.length - 1) {
+                historyIndex++;
+                audioBuffer = editHistory[historyIndex].buffer;
+                duration = audioBuffer.duration;
+                setupAudioPlayer();
+            }
+        });
+
+        // Export functionality
+        document.getElementById('exportBtn').addEventListener('click', function() {
+            exportAudio(audioBuffer, 'processed_audio');
+        });
+
+        document.getElementById('exportOriginalBtn').addEventListener('click', function() {
+            exportAudio(originalAudioData, 'original_audio');
+        });
+
+        document.getElementById('exportSelectionBtn').addEventListener('click', function() {
+            const start = parseFloat(document.getElementById('selectionStart').value) || 0;
+            const end = parseFloat(document.getElementById('selectionEnd').value) || duration;
+            exportSelection(start, end);
+        });
+
+        function exportAudio(buffer, filename) {
+            if (!buffer) {
+                alert('אין קובץ אודיו להורדה');
+                return;
+            }
+            
+            showProgress();
+            
+            try {
+                // Apply current effects to buffer before export
+                const processedBuffer = applyEffectsToBuffer(buffer);
+                
+                // Convert buffer to WAV
+                const wav = bufferToWav(processedBuffer);
+                const blob = new Blob([wav], { type: 'audio/wav' });
+                
+                // Create download link
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename + '_processed.wav';
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                
+                // Cleanup
+                setTimeout(() => {
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    hideProgress();
+                }, 100);
+                
+            } catch (error) {
+                console.error('שגיאה בייצוא:', error);
+                alert('שגיאה בייצוא הקובץ: ' + error.message);
+                hideProgress();
+            }
+        }
+
+        function applyEffectsToBuffer(inputBuffer) {
+            if (!inputBuffer || !audioContext) return inputBuffer;
+            
+            try {
+                // Create a copy of the buffer
+                const outputBuffer = audioContext.createBuffer(
+                    inputBuffer.numberOfChannels,
+                    inputBuffer.length,
+                    inputBuffer.sampleRate
+                );
+                
+                // Copy and process each channel
+                for (let channel = 0; channel < inputBuffer.numberOfChannels; channel++) {
+                    const inputData = inputBuffer.getChannelData(channel);
+                    const outputData = outputBuffer.getChannelData(channel);
+                    
+                    // Apply pitch shift effect
+                    const pitchRatio = parseFloat(document.getElementById('pitchSlider').value);
+                    if (pitchRatio !== 1.0) {
+                        applyPitchShiftToData(inputData, outputData, pitchRatio);
+                    } else {
+                        outputData.set(inputData);
+                    }
+                    
+                    // Apply distortion
+                    const distortion = parseInt(document.getElementById('distortionSlider').value);
+                    if (distortion > 0) {
+                        applyDistortionToData(outputData, distortion);
+                    }
+                }
+                
+                return outputBuffer;
+            } catch (error) {
+                console.error('שגיאה בעיבוד אפקטים:', error);
+                return inputBuffer;
+            }
+        }
+
+        function applyPitchShiftToData(inputData, outputData, pitchRatio) {
+            // Simple pitch shift by resampling
+            for (let i = 0; i < outputData.length; i++) {
+                const sourceIndex = Math.floor(i * pitchRatio);
+                if (sourceIndex < inputData.length) {
+                    outputData[i] = inputData[sourceIndex];
+                } else {
+                    outputData[i] = 0;
+                }
+            }
+        }
+
+        function applyDistortionToData(data, amount) {
+            const distortionAmount = amount / 100;
+            for (let i = 0; i < data.length; i++) {
+                const x = data[i];
+                data[i] = Math.sign(x) * Math.min(1, Math.abs(x) * (1 + distortionAmount));
+            }
+        }
+
+        function exportSelection(start, end) {
+            if (!audioBuffer || start >= end) return;
+            
+            const sampleRate = audioBuffer.sampleRate;
+            const startSample = Math.floor(start * sampleRate);
+            const endSample = Math.floor(end * sampleRate);
+            const length = endSample - startSample;
+            
+            const selectionBuffer = audioContext.createBuffer(
+                audioBuffer.numberOfChannels,
+                length,
+                sampleRate
+            );
+            
+            for (let channel = 0; channel < audioBuffer.numberOfChannels; channel++) {
+                const oldData = audioBuffer.getChannelData(channel);
+                const newData = selectionBuffer.getChannelData(channel);
+                
+                for (let i = 0; i < length; i++) {
+                    newData[i] = oldData[startSample + i];
+                }
+            }
+            
+            exportAudio(selectionBuffer, 'selection');
+        }
+
+        function bufferToWav(buffer) {
+            const length = buffer.length;
+            const numberOfChannels = buffer.numberOfChannels;
+            const sampleRate = buffer.sampleRate;
+            const arrayBuffer = new ArrayBuffer(44 + length * numberOfChannels * 2);
+            const view = new DataView(arrayBuffer);
+            
+            // WAV header
+            const writeString = (offset, string) => {
+                for (let i = 0; i < string.length; i++) {
+                    view.setUint8(offset + i, string.charCodeAt(i));
+                }
+            };
+            
+            writeString(0, 'RIFF');
+            view.setUint32(4, 36 + length * numberOfChannels * 2, true);
+            writeString(8, 'WAVE');
+            writeString(12, 'fmt ');
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, numberOfChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * numberOfChannels * 2, true);
+            view.setUint16(32, numberOfChannels * 2, true);
+            view.setUint16(34, 16, true);
+            writeString(36, 'data');
+            view.setUint32(40, length * numberOfChannels * 2, true);
+            
+            // Convert float samples to 16-bit PCM
+            let offset = 44;
+            for (let i = 0; i < length; i++) {
+                for (let channel = 0; channel < numberOfChannels; channel++) {
+                    const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+                    view.setInt16(offset, sample * 0x7FFF, true);
+                    offset += 2;
+                }
+            }
+            
+            return arrayBuffer;
+        }
+
+        function showProgress() {
+            document.getElementById('exportProgress').classList.remove('hidden');
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 10;
+                document.getElementById('progressBar').style.width = progress + '%';
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    setTimeout(hideProgress, 500);
+                }
+            }, 100);
+        }
+
+        function hideProgress() {
+            document.getElementById('exportProgress').classList.add('hidden');
+            document.getElementById('progressBar').style.width = '0%';
+        }
+
+        // Utility functions
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        function updateWaveform() {
+            // Simple waveform visualization
+            const waveform = document.getElementById('waveform');
+            waveform.style.background = 'linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%)';
+        }
+
+        // Waveform click to seek
+        document.getElementById('waveform').addEventListener('click', function(e) {
+            const rect = this.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const percentage = clickX / rect.width;
+            currentTime = percentage * duration;
+            
+            if (isPlaying) {
+                pauseAudio();
+                playAudio();
+            }
+        });
+
+        // Second audio file upload
+        document.getElementById('secondAudioFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    initAudioContext();
+                    audioContext.decodeAudioData(e.target.result)
+                        .then(buffer => {
+                            secondAudioBuffer = buffer;
+                            setupMixer();
+                            document.getElementById('mixerControls').classList.remove('hidden');
+                            mixerActive = true;
+                        })
+                        .catch(err => {
+                            alert('שגיאה בטעינת הקובץ השני: ' + err.message);
+                        });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        function setupMixer() {
+            if (!audioContext) return;
+            
+            // Create pan nodes
+            panNode = audioContext.createStereoPanner();
+            secondPanNode = audioContext.createStereoPanner();
+            
+            // Create gain nodes for tracks
+            secondGainNode = audioContext.createGain();
+            
+            // Set initial values
+            secondGainNode.gain.value = 0.3;
+            panNode.pan.value = 0;
+            secondPanNode.pan.value = 0;
+        }
+
+        // Mixer Controls
+        document.getElementById('track1Volume').addEventListener('input', function(e) {
+            const value = e.target.value / 100;
+            if (gainNode) gainNode.gain.value = value;
+            document.getElementById('track1VolumeValue').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('track2Volume').addEventListener('input', function(e) {
+            const value = e.target.value / 100;
+            if (secondGainNode) secondGainNode.gain.value = value;
+            document.getElementById('track2VolumeValue').textContent = e.target.value + '%';
+        });
+
+        document.getElementById('track1Pan').addEventListener('input', function(e) {
+            const value = e.target.value / 100;
+            if (panNode) panNode.pan.value = value;
+            const panText = value < -0.1 ? 'שמאל' : value > 0.1 ? 'ימין' : 'מרכז';
+            document.getElementById('track1PanValue').textContent = panText;
+        });
+
+        document.getElementById('track2Pan').addEventListener('input', function(e) {
+            const value = e.target.value / 100;
+            if (secondPanNode) secondPanNode.pan.value = value;
+            const panText = value < -0.1 ? 'שמאל' : value > 0.1 ? 'ימין' : 'מרכז';
+            document.getElementById('track2PanValue').textContent = panText;
+        });
+
+        document.getElementById('crossfadeSlider').addEventListener('input', function(e) {
+            const value = parseInt(e.target.value);
+            const track1Vol = (100 - value) / 100;
+            const track2Vol = value / 100;
+            
+            if (gainNode) gainNode.gain.value = track1Vol;
+            if (secondGainNode) secondGainNode.gain.value = track2Vol;
+            
+            document.getElementById('crossfadeValue').textContent = 
+                `${Math.round(track1Vol * 100)}% - ${Math.round(track2Vol * 100)}%`;
+        });
+
+        // Mix effect buttons
+        document.getElementById('voiceSwapBtn').addEventListener('click', function() {
+            if (audioBuffer && secondAudioBuffer) {
+                const temp = audioBuffer;
+                audioBuffer = secondAudioBuffer;
+                secondAudioBuffer = temp;
+                
+                this.classList.toggle('effect-active');
+                setupAudioPlayer();
+            }
+        });
+
+        document.getElementById('harmonizeBtn').addEventListener('click', function() {
+            this.classList.toggle('effect-active');
+            // Apply harmony effect by slightly detuning second track
+            if (secondSourceNode && this.classList.contains('effect-active')) {
+                secondSourceNode.playbackRate.value = 1.05; // Fifth harmony
+            } else if (secondSourceNode) {
+                secondSourceNode.playbackRate.value = 1.0;
+            }
+        });
+
+        document.getElementById('beatMatchBtn').addEventListener('click', function() {
+            this.classList.toggle('effect-active');
+            // Simple beat matching by adjusting tempo
+            if (secondSourceNode && this.classList.contains('effect-active')) {
+                secondSourceNode.playbackRate.value = 1.02;
+            } else if (secondSourceNode) {
+                secondSourceNode.playbackRate.value = 1.0;
+            }
+        });
+
+        // Advanced voice swap functions
+        document.getElementById('voiceTransferBtn').addEventListener('click', function() {
+            if (audioBuffer && secondAudioBuffer) {
+                this.classList.toggle('effect-active');
+                transferVoiceCharacteristics();
+            }
+        });
+
+        document.getElementById('voiceMorphBtn').addEventListener('click', function() {
+            if (audioBuffer && secondAudioBuffer) {
+                this.classList.toggle('effect-active');
+                morphVoices();
+            }
+        });
+
+        document.getElementById('voiceIsolateBtn').addEventListener('click', function() {
+            if (audioBuffer) {
+                this.classList.toggle('effect-active');
+                isolateVoice();
+            }
+        });
+
+        document.getElementById('voiceSwapIntensity').addEventListener('input', function(e) {
+            const value = e.target.value;
+            document.getElementById('voiceSwapValue').textContent = value + '%';
+            applyVoiceSwapIntensity(value / 100);
+        });
+
+        function transferVoiceCharacteristics() {
+            // Transfer pitch and formant characteristics from track 1 to track 2
+            if (secondSourceNode) {
+                const pitchRatio = parseFloat(document.getElementById('pitchSlider').value);
+                secondSourceNode.playbackRate.value = pitchRatio;
+                
+                // Apply similar EQ settings
+                const intensity = parseFloat(document.getElementById('voiceSwapIntensity').value) / 100;
+                Object.keys(eqNodes).forEach(freq => {
+                    const currentGain = eqNodes[freq].gain.value;
+                    eqNodes[freq].gain.value = currentGain * intensity;
+                });
+            }
+        }
+
+        function morphVoices() {
+            // Create a morphed version by blending characteristics
+            const intensity = parseFloat(document.getElementById('voiceSwapIntensity').value) / 100;
+            
+            if (gainNode && secondGainNode) {
+                // Blend the volumes based on intensity
+                gainNode.gain.value = 1 - intensity;
+                secondGainNode.gain.value = intensity;
+                
+                // Apply complementary pitch shifts
+                if (sourceNode) sourceNode.playbackRate.value = 1 + (intensity * 0.1);
+                if (secondSourceNode) secondSourceNode.playbackRate.value = 1 - (intensity * 0.1);
+            }
+        }
+
+        function isolateVoice() {
+            // Apply center channel extraction to isolate vocals
+            if (audioBuffer.numberOfChannels === 2) {
+                // Create mono mix with phase inversion to isolate center
+                const intensity = parseFloat(document.getElementById('voiceSwapIntensity').value) / 100;
+                
+                // Apply high-pass filter to isolate vocal frequencies
+                eqNodes[60].gain.value = -10 * intensity;
+                eqNodes[170].gain.value = 5 * intensity;
+                eqNodes[310].gain.value = 8 * intensity;
+                eqNodes[600].gain.value = 5 * intensity;
+                eqNodes[1000].gain.value = 3 * intensity;
+            }
+        }
+
+        function applyVoiceSwapIntensity(intensity) {
+            // Apply the current voice swap effect with given intensity
+            const activeBtn = document.querySelector('.bg-blue-200, .bg-green-200, .bg-orange-200');
+            if (activeBtn) {
+                if (activeBtn.id === 'voiceTransferBtn') {
+                    transferVoiceCharacteristics();
+                } else if (activeBtn.id === 'voiceMorphBtn') {
+                    morphVoices();
+                } else if (activeBtn.id === 'voiceIsolateBtn') {
+                    isolateVoice();
+                }
+            }
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+                e.preventDefault();
+                document.getElementById('playPauseBtn').click();
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'966519b680670bed',t:'MTc1MzcxMzI5OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
